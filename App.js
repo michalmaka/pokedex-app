@@ -1,50 +1,114 @@
-import React, { useState } from 'react';
-import { Button, View, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
-
-function HomeScreen({ navigation }) {
-  const [data, setData] = useState("unknown");
-  fetch('https://pokeapi.co/api/v2/pokemon/3')
-    .then((response) => response.json())
-    .then((json) => { setData(json.name) })
-    .catch((error) => { console.error(error); });
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Hello {data}!</Text>
-      <Button
-        title="Go to Details"
-        onPress={() => navigation.navigate('Details')}
-      />
-    </View>
-  );
-}
-
-function DetailsScreen({ navigation }) {
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Details Screen</Text>
-      <Button
-        title="Go to Details... again"
-        onPress={() => navigation.push('Details')}
-      />
-      <Button title="Go to Home" onPress={() => navigation.navigate('Home')} />
-      <Button title="Go back" onPress={() => navigation.goBack()} />
-    </View>
-  );
-}
+import React, { useState } from "react";
+import {
+  StatusBar,
+  StyleSheet,
+  FlatList,
+  Button,
+  View,
+  Text,
+} from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 const Stack = createNativeStackNavigator();
 
-function App() {
+const POKE_API_URI = "http://192.168.0.197:5000";
+
+const PokemonListRetriever = () => {
+  retriever = {
+    offset: 0,
+    limit: 20,
+    number_of_pokemons: 0,
+    on_received_pokemons: undefined,
+    get_pokemons: function () {
+      console.info("get_pokemons");
+      fetch(POKE_API_URI + `/pokemon?offset=${this.offset}&limit=${this.limit}`)
+        .then((response) => {
+          return response.json();
+        })
+        .then((json) => {
+          this.number_of_pokemons = json.count;
+          if (this.on_received_pokemons !== undefined) {
+            this.on_received_pokemons(json);
+          }
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    },
+    get_next_pokemons: function () {
+      if (this.offset + this.limit < this.number_of_pokemons) {
+        this.offset += this.limit;
+        this.get_pokemons();
+      } else {
+        alert("No more pokemons to load");
+      }
+    },
+  };
+
+  retriever.get_pokemons();
+
+  return retriever;
+};
+
+const pokemonListRetriever = new PokemonListRetriever();
+
+function PokemonList({ navigation }) {
+  const [pokemonList, setPokemonList] = useState([]);
+
+  pokemonListRetriever.on_received_pokemons = (pokemons_json) => {
+    const newly_loaded_pokemons = pokemons_json.results.map((field) => {
+      return field;
+    });
+    setPokemonList([...pokemonList, ...newly_loaded_pokemons]);
+  };
+
+  const Item = ({ title }) => (
+    <View style={styles.item}>
+      <Text style={styles.title}>{title}</Text>
+    </View>
+  );
+
+  const renderItem = ({ item }) => <Item title={item.name} />;
+  const onEndReached = () => {
+    console.log("Reached the end");
+    pokemonListRetriever.get_next_pokemons();
+  };
+  return (
+    <FlatList
+      data={pokemonList}
+      renderItem={renderItem}
+      onEndReachedThreshold={0.5}
+      onEndReached={onEndReached}
+      keyExtractor={(item) => item.name}
+    />
+  );
+}
+
+function PokemonListHome() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Details" component={DetailsScreen} />
+        <Stack.Screen name="Pokemon's list" component={PokemonList} />
+        {/* <Stack.Screen name="Pokemon's details" component={DetailsScreen} /> */}
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
-export default App;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    marginTop: StatusBar.currentHeight || 0,
+  },
+  item: {
+    padding: 20,
+    marginVertical: 8,
+    marginHorizontal: 16,
+  },
+  title: {
+    fontSize: 32,
+  },
+});
+
+export default PokemonListHome;
