@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  StatusBar,
-  StyleSheet,
-  FlatList,
-  Button,
-  View,
-  Text,
-} from "react-native";
+import { StatusBar, StyleSheet, FlatList, View, Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
