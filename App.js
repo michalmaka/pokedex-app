@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { StatusBar, StyleSheet, FlatList, View, Text } from "react-native";
+import {
+  StatusBar,
+  StyleSheet,
+  FlatList,
+  Text,
+  Image,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
@@ -56,13 +64,19 @@ function PokemonList({ navigation }) {
     setPokemonList([...pokemonList, ...newly_loaded_pokemons]);
   };
 
-  const Item = ({ title }) => (
-    <View style={styles.item}>
-      <Text style={styles.title}>{title}</Text>
-    </View>
+  const PokemonItem = ({ pokemon }) => (
+    <TouchableOpacity
+      onPress={() => {
+        console.log("Pressed " + pokemon.name);
+        navigation.navigate("Pokemon's details", pokemon);
+      }}
+      style={styles.item}
+    >
+      <Text style={styles.title}>{pokemon.name}</Text>
+    </TouchableOpacity>
   );
 
-  const renderItem = ({ item }) => <Item title={item.name} />;
+  const renderPokemonItem = ({ item }) => <PokemonItem pokemon={item} />;
   const onEndReached = () => {
     console.log("Reached the end");
     pokemonListRetriever.get_next_pokemons();
@@ -70,11 +84,37 @@ function PokemonList({ navigation }) {
   return (
     <FlatList
       data={pokemonList}
-      renderItem={renderItem}
+      renderItem={renderPokemonItem}
       onEndReachedThreshold={0.5}
       onEndReached={onEndReached}
       keyExtractor={(item) => item.name}
     />
+  );
+}
+
+const PokemonDetailsRetriever = function() {
+  
+}
+
+function PokemonDetails({ navigation, route }) {
+  const pokemon = route.params;
+
+  const [pokemonImage, setPokemonImage] = useState();
+
+  fetch(pokemon.url)
+    .then((response) => response.json())
+    .then((json) => {
+      console.log(json.name);
+      const image_url = json.sprites.front_default;
+      console.log(image_url);
+      setPokemonImage(image_url);
+    });
+
+  return (
+    <View>
+      <Text>Something about pokemon {pokemon.name}</Text>
+      <Image style={styles.logo} source={{ uri: pokemonImage }} />
+    </View>
   );
 }
 
@@ -83,7 +123,7 @@ function PokemonListHome() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
         <Stack.Screen name="Pokemon's list" component={PokemonList} />
-        {/* <Stack.Screen name="Pokemon's details" component={DetailsScreen} /> */}
+        <Stack.Screen name="Pokemon's details" component={PokemonDetails} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -101,6 +141,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
+  },
+  logo: {
+    width: 150,
+    height: 150,
   },
 });
 
