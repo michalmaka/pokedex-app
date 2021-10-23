@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   StatusBar,
   StyleSheet,
@@ -92,28 +92,41 @@ function PokemonList({ navigation }) {
   );
 }
 
-const PokemonDetailsRetriever = function() {
-  
-}
+const PokemonDetailsRetriever = function (url) {
+  const [pokemonDetails, setPokemonDetails] = useState();
 
-function PokemonDetails({ navigation, route }) {
+  useEffect(() => {
+    const getPokemonDetails = async () => {
+      const response = await fetch(url);
+      const json = await response.json();
+      console.log("Received details about " + json.name);
+      setPokemonDetails(json);
+    };
+    getPokemonDetails();
+  }, [url]);
+
+  return pokemonDetails;
+};
+
+function PokemonDetailsView({ navigation, route }) {
   const pokemon = route.params;
+  const pokemonDetails = PokemonDetailsRetriever(pokemon.url);
 
-  const [pokemonImage, setPokemonImage] = useState();
-
-  fetch(pokemon.url)
-    .then((response) => response.json())
-    .then((json) => {
-      console.log(json.name);
-      const image_url = json.sprites.front_default;
-      console.log(image_url);
-      setPokemonImage(image_url);
-    });
+  if (pokemonDetails === undefined) {
+    return (
+      <View>
+        <Text>Loading details about pokemon {pokemon.name}</Text>
+      </View>
+    );
+  }
 
   return (
     <View>
       <Text>Something about pokemon {pokemon.name}</Text>
-      <Image style={styles.logo} source={{ uri: pokemonImage }} />
+      <Image
+        style={styles.logo}
+        source={{ uri: pokemonDetails.sprites.front_default }}
+      />
     </View>
   );
 }
@@ -123,7 +136,7 @@ function PokemonListHome() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
         <Stack.Screen name="Pokemon's list" component={PokemonList} />
-        <Stack.Screen name="Pokemon's details" component={PokemonDetails} />
+        <Stack.Screen name="Pokemon's details" component={PokemonDetailsView} />
       </Stack.Navigator>
     </NavigationContainer>
   );
