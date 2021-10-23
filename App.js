@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Stack = createNativeStackNavigator();
 
@@ -66,7 +67,7 @@ function PokemonList({ navigation }) {
 
   const renderPokemonItem = ({ item }) => <PokemonItem pokemon={item} />;
   const onEndReached = () => {
-    console.log("Reached the end");
+    console.log("Approaching end of the list, requesting for more pokemons");
     loadMorePokemons();
   };
   return (
@@ -96,17 +97,69 @@ const PokemonDetailsRetriever = function (url) {
   return pokemonDetails;
 };
 
+const FAVOURITE_POKEMON_KEY = "favourite_pokemon";
+
+const FavouritePokemonManager = function (pokemon) {
+  const [isFavourite, setIsFavouritePokemon] = useState();
+  const favouriteSetter = (newIsFavourite) => {
+    console.log("Setting isFavourite to " + newIsFavourite);
+    setIsFavouritePokemon(newIsFavourite);
+  };
+  const checkIfFavourite = async () => {
+    try {
+      const value = await AsyncStorage.getItem(`@${FAVOURITE_POKEMON_KEY}`);
+      if (value !== null) {
+        console.log(
+          `Current pokemon ${pokemon.name} and stored as favourite ${value}`
+        );
+        favouriteSetter(value === pokemon.name);
+        return;
+      }
+    } catch (e) {
+      console.error("Error during loading favourite pokemon", e);
+    }
+    favouriteSetter(false);
+  };
+
+  const setAsFavourite = async () => {
+    try {
+      await AsyncStorage.setItem(`@${FAVOURITE_POKEMON_KEY}`, pokemon.name);
+      console.log(`Set ${pokemon.name} as favourite`);
+      favouriteSetter(true);
+    } catch (e) {
+      console.error("Error during saving favourite pokemon", e);
+    }
+  };
+
+  const unsetAsFavourite = async () => {
+    try {
+      await AsyncStorage.removeItem(`@${FAVOURITE_POKEMON_KEY}`);
+      console.log(`Unsetting ${pokemon.name} as favourite`);
+      favouriteSetter(false);
+    } catch (e) {
+      console.error("Error during removing favourite pokemon", e);
+    }
+  };
+
+  return { isFavourite, checkIfFavourite, setAsFavourite, unsetAsFavourite };
+};
+
 function PokemonDetailsView({ navigation, route }) {
   const pokemon = route.params;
   const pokemonDetails = PokemonDetailsRetriever(pokemon.url);
-  const [buttonTitle, setButtonTitle] = useState("Add to favourites");
-  const [buttonColor, setButtonColor] = useState("blue");
+  const FAVOURITE_COLOR = "red";
+  const NOT_FAVOURITE_COLOR = "blue";
+  const TITLE_ON_FAVOURITE = "Unset as favourite";
+  const TITLE_ON_NOT_FAVOURITE = "Add to favourite";
+  const { isFavourite, checkIfFavourite, setAsFavourite, unsetAsFavourite } =
+    FavouritePokemonManager(pokemon);
 
   useEffect(() => {
     navigation.setOptions({ title: pokemon.name });
-  });
+    checkIfFavourite();
+  }, [isFavourite]);
 
-  if (pokemonDetails === undefined) {
+  if (pokemonDetails === undefined || isFavourite === undefined) {
     return (
       <View>
         <Text style={styles.title}>Loading...</Text>
@@ -114,15 +167,21 @@ function PokemonDetailsView({ navigation, route }) {
     );
   }
 
+  console.log(`Render ${isFavourite}`);
+
   return (
     <ScrollView>
       <Button
-        title={buttonTitle}
-        color={buttonColor}
+        title={isFavourite ? TITLE_ON_FAVOURITE : TITLE_ON_NOT_FAVOURITE}
+        color={isFavourite ? FAVOURITE_COLOR : NOT_FAVOURITE_COLOR}
         onPress={() => {
-          console.log(`Added ${pokemonDetails.name} to favourites`);
-          setButtonTitle("This pokemon is your favourite!");
-          setButtonColor("red")
+          if (isFavourite) {
+            console.log(`Unsetting ${pokemonDetails.name} as favourite`);
+            unsetAsFavourite();
+          } else {
+            console.log(`Adding ${pokemonDetails.name} as favourite`);
+            setAsFavourite();
+          }
         }}
       />
       <Image
