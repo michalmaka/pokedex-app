@@ -99,6 +99,8 @@ const PokemonDetailsRetriever = function (url) {
 function PokemonDetailsView({ navigation, route }) {
   const pokemon = route.params;
   const pokemonDetails = PokemonDetailsRetriever(pokemon.url);
+  const [buttonTitle, setButtonTitle] = useState("Add to favourites");
+  const [buttonColor, setButtonColor] = useState("blue");
 
   useEffect(() => {
     navigation.setOptions({ title: pokemon.name });
@@ -114,6 +116,15 @@ function PokemonDetailsView({ navigation, route }) {
 
   return (
     <ScrollView>
+      <Button
+        title={buttonTitle}
+        color={buttonColor}
+        onPress={() => {
+          console.log(`Added ${pokemonDetails.name} to favourites`);
+          setButtonTitle("This pokemon is your favourite!");
+          setButtonColor("red")
+        }}
+      />
       <Image
         style={styles.logo}
         source={{ uri: pokemonDetails.sprites.front_default }}
@@ -125,9 +136,7 @@ function PokemonDetailsView({ navigation, route }) {
       <Text style={styles.title}>Abilities</Text>
       {pokemonDetails.abilities.map((abilityInfo) => {
         return (
-          <Text key={abilityInfo.ability.name}>
-            {abilityInfo.ability.name}
-          </Text>
+          <Text key={abilityInfo.ability.name}>{abilityInfo.ability.name}</Text>
         );
       })}
       <Text style={styles.title}>Moves</Text>
