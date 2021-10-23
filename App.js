@@ -12,9 +12,8 @@ import {
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const Stack = createNativeStackNavigator();
 
 const POKE_API_URI = "http://192.168.0.197:5000";
 
@@ -206,14 +205,17 @@ function PokemonDetailsView({ navigation, route }) {
   );
 }
 
-function PokemonListHome() {
+const PokemonListStack = createNativeStackNavigator();
+
+function PokemonListScreen() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen name="Pokemon's list" component={PokemonList} />
-        <Stack.Screen name="Pokemon's details" component={PokemonDetailsView} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <PokemonListStack.Navigator>
+      <PokemonListStack.Screen name="Pokemon's list" component={PokemonList} />
+      <PokemonListStack.Screen
+        name="Pokemon's details"
+        component={PokemonDetailsView}
+      />
+    </PokemonListStack.Navigator>
   );
 }
 
@@ -236,4 +238,32 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PokemonListHome;
+function FavouritePokemonScreen() {
+  return <ScrollView></ScrollView>;
+}
+
+function PokemonWorldMapScreen() {
+  return <ScrollView></ScrollView>;
+}
+
+const Tab = createBottomTabNavigator();
+
+function App() {
+  return (
+    <NavigationContainer>
+      <Tab.Navigator>
+        <Tab.Screen name="Pokemons" component={PokemonListScreen} />
+        <Tab.Screen
+          name="Favourite Pokemon"
+          component={FavouritePokemonScreen}
+        />
+        <Tab.Screen
+          name="Pokemon's world map"
+          component={PokemonWorldMapScreen}
+        />
+      </Tab.Navigator>
+    </NavigationContainer>
+  );
+}
+
+export default App;
