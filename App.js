@@ -16,7 +16,7 @@ const Stack = createNativeStackNavigator();
 const POKE_API_URI = "http://192.168.0.197:5000";
 
 const PokemonListRetriever = function () {
-  const limit = 500;
+  const limit = 20;
   const [offset, setOffset] = useState(0);
   const [hasMoreData, setHasMoreData] = useState(true);
   const [pokemonList, setPokemonList] = useState([]);
@@ -33,7 +33,6 @@ const PokemonListRetriever = function () {
       console.log(`Received new ${newly_loaded_pokemons.length} pokemons`);
       setPokemonList([...pokemonList, ...newly_loaded_pokemons]);
       setHasMoreData(offset + newly_loaded_pokemons.length < json.count);
-      console.log(`${offset} and ${json.count} = ${hasMoreData}`);
     };
 
     if (hasMoreData) {
@@ -99,17 +98,22 @@ function PokemonDetailsView({ navigation, route }) {
   const pokemon = route.params;
   const pokemonDetails = PokemonDetailsRetriever(pokemon.url);
 
+  useEffect(() => {
+    navigation.setOptions({ title: pokemon.name });
+  });
+
   if (pokemonDetails === undefined) {
     return (
       <View>
-        <Text>Loading details about pokemon {pokemon.name}</Text>
+        <Text style={styles.title}>
+          Loading...
+        </Text>
       </View>
     );
   }
 
   return (
     <View>
-      <Text>Something about pokemon {pokemon.name}</Text>
       <Image
         style={styles.logo}
         source={{ uri: pokemonDetails.sprites.front_default }}
