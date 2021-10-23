@@ -15,54 +15,41 @@ const Stack = createNativeStackNavigator();
 
 const POKE_API_URI = "http://192.168.0.197:5000";
 
-const PokemonListRetriever = () => {
-  retriever = {
-    offset: 0,
-    limit: 20,
-    number_of_pokemons: 0,
-    on_received_pokemons: undefined,
-    get_pokemons: function () {
-      console.info("get_pokemons");
-      fetch(POKE_API_URI + `/pokemon?offset=${this.offset}&limit=${this.limit}`)
-        .then((response) => {
-          return response.json();
-        })
-        .then((json) => {
-          this.number_of_pokemons = json.count;
-          if (this.on_received_pokemons !== undefined) {
-            this.on_received_pokemons(json);
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
-    },
-    get_next_pokemons: function () {
-      if (this.offset + this.limit < this.number_of_pokemons) {
-        this.offset += this.limit;
-        this.get_pokemons();
-      } else {
-        alert("No more pokemons to load");
-      }
-    },
-  };
-
-  retriever.get_pokemons();
-
-  return retriever;
-};
-
-const pokemonListRetriever = new PokemonListRetriever();
-
-function PokemonList({ navigation }) {
+const PokemonListRetriever = function () {
+  const limit = 500;
+  const [offset, setOffset] = useState(0);
+  const [hasMoreData, setHasMoreData] = useState(true);
   const [pokemonList, setPokemonList] = useState([]);
 
-  pokemonListRetriever.on_received_pokemons = (pokemons_json) => {
-    const newly_loaded_pokemons = pokemons_json.results.map((field) => {
-      return field;
-    });
-    setPokemonList([...pokemonList, ...newly_loaded_pokemons]);
+  useEffect(() => {
+    const getPokemonList = async () => {
+      const response = await fetch(
+        POKE_API_URI + `/pokemon?offset=${offset}&limit=${limit}`
+      );
+      const json = await response.json();
+      const newly_loaded_pokemons = json.results.map((field) => {
+        return field;
+      });
+      console.log(`Received new ${newly_loaded_pokemons.length} pokemons`);
+      setPokemonList([...pokemonList, ...newly_loaded_pokemons]);
+      setHasMoreData(offset + newly_loaded_pokemons.length < json.count);
+      console.log(`${offset} and ${json.count} = ${hasMoreData}`);
+    };
+
+    if (hasMoreData) {
+      getPokemonList();
+    }
+  }, [offset]);
+
+  const loadMorePokemons = () => {
+    setOffset(offset + limit);
   };
+
+  return { pokemonList, loadMorePokemons };
+};
+
+function PokemonList({ navigation }) {
+  const { pokemonList, loadMorePokemons } = PokemonListRetriever();
 
   const PokemonItem = ({ pokemon }) => (
     <TouchableOpacity
@@ -79,7 +66,7 @@ function PokemonList({ navigation }) {
   const renderPokemonItem = ({ item }) => <PokemonItem pokemon={item} />;
   const onEndReached = () => {
     console.log("Reached the end");
-    pokemonListRetriever.get_next_pokemons();
+    loadMorePokemons();
   };
   return (
     <FlatList
