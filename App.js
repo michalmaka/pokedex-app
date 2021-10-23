@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   View,
+  ScrollView
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -105,20 +106,30 @@ function PokemonDetailsView({ navigation, route }) {
   if (pokemonDetails === undefined) {
     return (
       <View>
-        <Text style={styles.title}>
-          Loading...
-        </Text>
+        <Text style={styles.title}>Loading...</Text>
       </View>
     );
   }
 
   return (
-    <View>
+    <ScrollView>
       <Image
         style={styles.logo}
         source={{ uri: pokemonDetails.sprites.front_default }}
       />
-    </View>
+      <Text style={styles.title}>Height</Text>
+      <Text>{pokemonDetails.height}</Text>
+      <Text style={styles.title}>Weight</Text>
+      <Text>{pokemonDetails.weight}</Text>
+      <Text style={styles.title}>Abilities</Text>
+      {pokemonDetails.abilities.map((ability) => {
+        return <Text>{ability.ability.name}</Text>;
+      })}
+      <Text style={styles.title}>Moves</Text>
+      {pokemonDetails.moves.map((move) => {
+        return <Text>{move.move.name}</Text>;
+      })}
+    </ScrollView>
   );
 }
 
