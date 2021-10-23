@@ -14,6 +14,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import MapView from "react-native-maps";
+import { Marker } from "react-native-maps";
 
 const POKE_API_URI = "http://192.168.0.197:5000";
 
@@ -98,49 +100,51 @@ const PokemonDetailsRetriever = function (url) {
 
 const FAVOURITE_POKEMON_KEY = "favourite_pokemon";
 
-const FavouritePokemonManager = function (pokemon) {
-  const [isFavourite, setIsFavouritePokemon] = useState();
-  const favouriteSetter = (newIsFavourite) => {
-    console.log("Setting isFavourite to " + newIsFavourite);
-    setIsFavouritePokemon(newIsFavourite);
-  };
-  const checkIfFavourite = async () => {
+const FavouritePokemonManager = function () {
+  const [favouritePokemon, setFavouritePokemon] = useState();
+
+  const getFavouritePokemon = async () => {
     try {
       const value = await AsyncStorage.getItem(`@${FAVOURITE_POKEMON_KEY}`);
       if (value !== null) {
-        console.log(
-          `Current pokemon ${pokemon.name} and stored as favourite ${value}`
-        );
-        favouriteSetter(value === pokemon.name);
+        const json = JSON.parse(value);
+        console.log(`Currently favourite pokemon is ${json.name}`);
+        setFavouritePokemon(json.name);
         return;
       }
     } catch (e) {
       console.error("Error during loading favourite pokemon", e);
     }
-    favouriteSetter(false);
+    setFavouritePokemon("");
   };
 
-  const setAsFavourite = async () => {
+  const setPokemonAsFavourite = async (pokemonDetails) => {
     try {
-      await AsyncStorage.setItem(`@${FAVOURITE_POKEMON_KEY}`, pokemon.name);
-      console.log(`Set ${pokemon.name} as favourite`);
-      favouriteSetter(true);
+      json = JSON.stringify(pokemonDetails);
+      await AsyncStorage.setItem(`@${FAVOURITE_POKEMON_KEY}`, json);
+      console.log(`Set ${pokemonDetails.name} as favourite`);
+      setFavouritePokemon(pokemonDetails);
     } catch (e) {
       console.error("Error during saving favourite pokemon", e);
     }
   };
 
-  const unsetAsFavourite = async () => {
+  const unsetFavouritePokemon = async () => {
     try {
       await AsyncStorage.removeItem(`@${FAVOURITE_POKEMON_KEY}`);
-      console.log(`Unsetting ${pokemon.name} as favourite`);
-      favouriteSetter(false);
+      console.log(`Unsetting favourite pokemon`);
+      setFavouritePokemon("");
     } catch (e) {
       console.error("Error during removing favourite pokemon", e);
     }
   };
 
-  return { isFavourite, checkIfFavourite, setAsFavourite, unsetAsFavourite };
+  return {
+    favouritePokemon,
+    getFavouritePokemon,
+    setPokemonAsFavourite,
+    unsetFavouritePokemon,
+  };
 };
 
 function PokemonDetailsView({ navigation, route }) {
@@ -150,15 +154,19 @@ function PokemonDetailsView({ navigation, route }) {
   const NOT_FAVOURITE_COLOR = "blue";
   const TITLE_ON_FAVOURITE = "Unset as favourite";
   const TITLE_ON_NOT_FAVOURITE = "Add to favourite";
-  const { isFavourite, checkIfFavourite, setAsFavourite, unsetAsFavourite } =
-    FavouritePokemonManager(pokemon);
+  const {
+    favouritePokemon,
+    getFavouritePokemon,
+    setPokemonAsFavourite,
+    unsetFavouritePokemon,
+  } = FavouritePokemonManager();
 
   useEffect(() => {
     navigation.setOptions({ title: pokemon.name });
-    checkIfFavourite();
-  }, [isFavourite]);
+    getFavouritePokemon();
+  }, [favouritePokemon]);
 
-  if (pokemonDetails === undefined || isFavourite === undefined) {
+  if (pokemonDetails === undefined || favouritePokemon === undefined) {
     return (
       <View>
         <Text style={styles.title}>Loading...</Text>
@@ -166,7 +174,7 @@ function PokemonDetailsView({ navigation, route }) {
     );
   }
 
-  console.log(`Render ${isFavourite}`);
+  const isFavourite = favouritePokemon === pokemonDetails.name;
 
   return (
     <ScrollView>
@@ -176,10 +184,10 @@ function PokemonDetailsView({ navigation, route }) {
         onPress={() => {
           if (isFavourite) {
             console.log(`Unsetting ${pokemonDetails.name} as favourite`);
-            unsetAsFavourite();
+            unsetFavouritePokemon();
           } else {
             console.log(`Adding ${pokemonDetails.name} as favourite`);
-            setAsFavourite();
+            setPokemonAsFavourite(pokemonDetails);
           }
         }}
       />
@@ -239,11 +247,66 @@ const styles = StyleSheet.create({
 });
 
 function FavouritePokemonScreen() {
-  return <ScrollView></ScrollView>;
+  const { favouritePokemon, getFavouritePokemon } = FavouritePokemonManager();
+
+  useEffect(() => {
+    getFavouritePokemon();
+  }, [favouritePokemon]);
+
+  console.log(favouritePokemon);
+
+  if (favouritePokemon === undefined) {
+    return (
+      <View>
+        <Text style={styles.title}>Favourite pokemon is not yet set</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      <Text>{favouritePokemon}</Text>
+    </View>
+  );
 }
 
 function PokemonWorldMapScreen() {
-  return <ScrollView></ScrollView>;
+  const [markers, setMarkers] = useState([]);
+  const AddMarker = (LatLng) => {
+    console.log("Adding new marker on " + LatLng.longitude + " " + LatLng.latitude);
+    const createNewMarker = () => {
+      return {
+        latlng: LatLng,
+        title: "Marker",
+        description: "Test"
+      };
+    };
+    setMarkers([...markers, new createNewMarker()]);
+  };
+
+  return (
+    <MapView
+      style={{ flex: 1 }}
+      initialRegion={{
+        latitude: 50.06176654886843,
+        longitude: 19.937563419638618,
+        latitudeDelta: 0.5,
+        longitudeDelta: 0.5,
+      }}
+      onLongPress={(e) => {
+        AddMarker(e.nativeEvent.coordinate);
+      }}
+    >
+      {markers.map((marker, index) => (
+        <Marker
+          key={index}
+          coordinate={marker.latlng}
+          title={marker.title}
+          description={marker.description}
+        />
+      ))}
+    </MapView>
+  );
 }
 
 const Tab = createBottomTabNavigator();
